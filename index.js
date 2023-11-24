@@ -509,16 +509,32 @@ async function run() {
     });
 
     // admin-home-get-information
-    app.get("/admin-statas", async (req, res) => {
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
       const products = await menuCollection.estimatedDocumentCount();
       const orders = await paymentCollection.estimatedDocumentCount();
+
       // this not the best way
-      const payments = await paymentCollection.find().toArray();
-      const revinue = payments.reduce(
-        (total, payment) => total + payment.price,
-        0
-      );
+
+      // const payments = await paymentCollection.find().toArray();
+      // const revinue = payments.reduce(
+      //   (total, payment) => total + payment.price,
+      //   0
+      // );
+
+      // this is the best way
+
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalPrice: { $sum: "$price" },
+            },
+          },
+        ])
+        .toArray();
+      const revinue = result.length > 0 ? result[0].totalPrice.toFixed(2) : 0;
 
       res.send({ users, products, orders, revinue });
     });
