@@ -508,6 +508,21 @@ async function run() {
       res.send({ paymentresult, deleteResult });
     });
 
+    // admin-home-get-information
+    app.get("/admin-statas", async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const products = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+      // this not the best way
+      const payments = await paymentCollection.find().toArray();
+      const revinue = payments.reduce(
+        (total, payment) => total + payment.price,
+        0
+      );
+
+      res.send({ users, products, orders, revinue });
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
