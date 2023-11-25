@@ -539,6 +539,45 @@ async function run() {
       res.send({ users, products, orders, revinue });
     });
 
+    // aggregate pipeline to get total revenue each product and total sell each category
+    // using aggregate pipeline
+    app.get("/order-stats", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $unwind: "$menuItemIds",
+          },
+          {
+            $lookup: {
+              from: "menu",
+              localField: "menuItemIds",
+              foreignField: "_id",
+              as: "menuItems",
+            },
+          },
+          {
+            $unwind: "$menuItems",
+          },
+          {
+            $group: {
+              _id: "$menuItems.category",
+              quantity: { $sum: 1 },
+              totalRevenue: { $sum: "$menuItems.price" },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              category: "$_id",
+              quantity: "$quantity",
+              revenue: "$totalRevenue",
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
